@@ -1,3 +1,5 @@
 # webrtc-p2p-datachennel
 
-p2pÊÓÆµÁÄÌì£¬¼ÓÈëdatachannel½øĞĞ¼òµ¥µÄÏûÏ¢·¢ËÍ
+p2pè§†é¢‘èŠå¤©ï¼ŒåŠ å…¥datachannelè¿›è¡Œç®€å•çš„æ¶ˆæ¯å‘é€
+
+![](https://raw.githubusercontent.com/caiya/imgs/c24d33133b13ef71ea2a1cef9584fbde1fff1331/%E5%AE%9E%E6%97%B6%E6%B6%88%E6%81%AF.png)
