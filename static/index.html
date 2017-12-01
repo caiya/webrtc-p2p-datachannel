@@ -35,7 +35,7 @@
       myVideoStream, myVideo,
       yourVideoStream, yourVideo,
       doNothing = function () { },
-      pc,
+      pc, dc, data = {},
       constraints = {
         mandatory: {
           OfferToReceiveAudio: true,
@@ -176,10 +176,68 @@
       pc.onicecandidate = onIceCandidate
       pc.onaddstream = onRemoteStreamAdded
       pc.onremovestream = onRemoteStreamRemoved
-
+      pc.ondatachannel = onDataChannelAdded
       // 等待媒体就绪
       attachMediaIfReady()
     }
+
+    // 检测到浏览器一端创建了数据通道后，则调用此程序：保存数据通道，设置处理程序
+    function onDataChannelAdded(e) {
+      dc = e.channel
+      setupDataHandlers()   // 设置数据通道处理程序
+      sendChat('Hello!')    // 发送hello
+    }
+
+    // 设置数据通道消息的处理程序
+    function setupDataHandlers() {
+      data.send = function (msg) {
+        msg = JSON.stringify(msg)
+        console.log('sending msg ：' + msg + ' over data channel')
+        dc.send(msg)
+      }
+      dc.onmessage = function(e) {
+        var msg = JSON.parse(e.data),
+          cb = document.getElementById('chatbox'),
+          rtt = document.getElementById('rtt');
+        if (msg.rtt) {    // 如果是实时文本，显示在实时窗口
+          console.log('received rtt of ' + msg.rtt)
+          rtt.value = msg.rtt
+          msg = msg.rtt
+        } else if (msg.chat) {    // 如果是完整的消息，显示在聊天窗口
+          console.log('received chat of ' + msg.chat)
+          cb.value += '<- ' + msg.chat + '\n'
+          rtt.value = ''
+          msg = msg.chat
+        } else {
+          console.log('received ' + msg + ' on data channel')
+        }
+      }
+    }
+
+    // 发送实时文本
+    function sendRtt(){
+      var msg = document.getElementById('chat').value
+      data.send({
+        rtt: msg
+      })
+    }
+
+    // 发送常规聊天文本
+    function sendChat(msg) {
+      var cb = document.getElementById('chatbox'),
+          c = document.getElementById('chat');
+      
+      // 在本地显示消息，发送消息并强制窗口滚动到最后一行
+      msg = msg || c.value
+      console.log('sendChat-> ', msg)
+      cb.value += '-> ' + msg + '\n'
+      data.send({
+        chat: msg
+      })
+      c.value = ''
+      cb.scrollTop = cb.scrollHeight    // 滚动底部
+    }
+
 
     // 如果当前浏览器有另一个候选项，将其发送给对等端
     function onIceCandidate(e) {
@@ -220,6 +278,8 @@
 
     // 生成一个offer
     function call() {
+      dc = pc.createDataChannel('chat')
+      setupDataHandlers()
       pc.createOffer(gotDescription, doNothing, constraints)
     }
 
@@ -303,18 +363,30 @@
     <p>
       <b>发出的消息</b>
       <br/>
-      <textarea id="outmessages" style="width:100%" rows="30"></textarea>
+      <textarea id="outmessages" style="width:100%" rows="30" cols="30"></textarea>
     </p>
   </div>
 
-  <div style="width:30%;vertical-align:top;margin-left:200px;">
+  <div style="width: 30%;vertical-align:top">
+    <textarea name="" id="chatbox" style="width:100%" rows="10"></textarea>
+    <p style="width:100%">
+      <b>实时消息：</b>
+      <textarea name="" id="rtt" style="width:100%" rows="10"></textarea>
+    </p>
+    <p style="width:100%">
+      <p>聊天消息：</p>
+      <input type="text" style="width:100%;" name="chat" id="chat" onkeyup="sendRtt();if (event.keyCode == 13){sendChat();return false;}"/>
+    </p>
+  </div>
+
+  <div style="width:30%;vertical-align:top;">
     <div>
       <video id="yourVideo" autoplay="autoplay" controls muted="true"/>
     </div>
     <p>
       <b>收到的消息</b>
       <br/>
-      <textarea id="inmessages" style="width:100%" rows="30"></textarea>
+      <textarea id="inmessages" style="width:100%" rows="30" cols="30"></textarea>
     </p>
   </div>
 
